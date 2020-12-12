@@ -78,7 +78,7 @@ osThreadId_t controllerNodeTaskHandle;
 const osThreadAttr_t controllerNodeTask_attributes = {
   .name = "controllerNode",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128 * 4
+  .stack_size = 128 * 8
 };
 /* USER CODE END PV */
 
