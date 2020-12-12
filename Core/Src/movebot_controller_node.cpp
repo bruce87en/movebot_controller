@@ -71,11 +71,30 @@ void MoveBotControllerNodeTask(void *argument)
 	}
 }
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
-  nh.getHardware()->flush();
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	nh.getHardware()->flush();
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-// when DMA complete, STM32Hardware.rbuf may still have unread data
-  nh.getHardware()->reset_rbuf();
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	// when DMA complete, STM32Hardware.rbuf may still have unread data
+	nh.getHardware()->reset_rbuf();
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+	if (huart->ErrorCode & HAL_UART_ERROR_ORE) {
+		nh.logerror("UART overrun error");
+		nh.getHardware()->reset_rbuf();
+	} else {
+		nh.logerror("UART other error");
+		nh.getHardware()->reset_rbuf();
+	}
+}
+
+void HAL_UART_AbortCpltCallback(UART_HandleTypeDef *huart)
+{
+	nh.logerror("UART abort error");
+	nh.getHardware()->reset_rbuf();
 }
