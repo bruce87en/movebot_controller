@@ -9,8 +9,7 @@
 #include <ros.h>
 #include <tf/tf.h>
 #include <std_msgs/String.h>
-#include <tf/transform_broadcaster.h>
-#include <nav_msgs/Odometry.h>
+#include <std_msgs/Float32MultiArray.h>
 
 #include "odometry.h"
 #include "movebot_controller_node.h"
@@ -23,27 +22,19 @@ ros::NodeHandle  nh;
 ros::Time last_time;
 ros::Time now;
 
-nav_msgs::Odometry odom;
-ros::Publisher odom_pub("odom", &odom);
+std_msgs::Float32MultiArray odometry;
+ros::Publisher odometry_pub("odometry_data", &odometry);
+float odometry_data[7];
 
-geometry_msgs::TransformStamped t;
-tf::TransformBroadcaster odom_broadcaster;
-
-char base_footprint[] = "/base_footprint";
-char odom_name[] = "/odom";
-
-std_msgs::String str_msg;
-ros::Publisher chatter("chatter", &str_msg);
-
-char hello[13] = "hello world!";
 
 void MoveBotControllerNodeTask(void *argument)
 {
 	nh.initNode();
 
-	nh.advertise(odom_pub);
-	nh.advertise(chatter);
-	odom_broadcaster.init(nh);
+	nh.advertise(odometry_pub);
+
+	odometry.data = odometry_data;
+	odometry.data_length = 7;
 
 	OdometryReset();
 	last_time = nh.now();
@@ -53,33 +44,18 @@ void MoveBotControllerNodeTask(void *argument)
 
 		OdometryGetData(&data);
 		now = nh.now();
-
-		geometry_msgs::Quaternion odom_quat = tf::createQuaternionFromYaw(data.theta);
-
-		t.header.frame_id = odom_name;
-		t.child_frame_id = base_footprint;
-		t.transform.translation.x = data.x;
-		t.transform.translation.y = data.y;
-		t.transform.translation.z = 0;
-		t.transform.rotation = odom_quat;
-		t.header.stamp = now;
-		odom_broadcaster.sendTransform(t);
-
 		float dt = (float)(now - last_time).toSec();
-
-		odom.header.stamp = now;
-		odom.header.frame_id = odom_name;
-		odom.pose.pose.position.x = data.x;
-		odom.pose.pose.position.y = data.y;
-		odom.pose.pose.position.z = 0.0;
-		odom.pose.pose.orientation = odom_quat;
-		odom.child_frame_id = base_footprint;
-		odom.twist.twist.linear.x = data.dx / dt;
-		odom.twist.twist.linear.y = data.dy / dt;
-		odom.twist.twist.angular.z = data.dtheta / dt;
-		odom_pub.publish(&odom);
-
 		last_time = now;
+
+		odometry_data[0] = data.x;
+		odometry_data[1] = data.y;
+		odometry_data[2] = data.theta;
+		odometry_data[3] = data.dx;
+		odometry_data[4] = data.dy;
+		odometry_data[5] = data.dtheta;
+		odometry_data[6] = dt;
+
+		odometry_pub.publish(&odometry);
 
 		nh.spinOnce();
 	}
