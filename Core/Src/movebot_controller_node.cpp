@@ -7,6 +7,8 @@
 
 #include <cmsis_os.h>
 #include <ros.h>
+#include <tf/tf.h>
+#include <std_msgs/String.h>
 #include <tf/transform_broadcaster.h>
 #include <nav_msgs/Odometry.h>
 
@@ -30,11 +32,17 @@ tf::TransformBroadcaster odom_broadcaster;
 char base_footprint[] = "/base_footprint";
 char odom_name[] = "/odom";
 
+std_msgs::String str_msg;
+ros::Publisher chatter("chatter", &str_msg);
+
+char hello[13] = "hello world!";
+
 void MoveBotControllerNodeTask(void *argument)
 {
 	nh.initNode();
 
 	nh.advertise(odom_pub);
+	nh.advertise(chatter);
 	odom_broadcaster.init(nh);
 
 	OdometryReset();
@@ -46,7 +54,7 @@ void MoveBotControllerNodeTask(void *argument)
 		OdometryGetData(&data);
 		now = nh.now();
 
-		geometry_msgs::Quaternion odom_quat;
+		geometry_msgs::Quaternion odom_quat = tf::createQuaternionFromYaw(data.theta);
 
 		t.header.frame_id = odom_name;
 		t.child_frame_id = base_footprint;
@@ -75,4 +83,12 @@ void MoveBotControllerNodeTask(void *argument)
 
 		nh.spinOnce();
 	}
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+  nh.getHardware()->flush();
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+  nh.getHardware()->reset_rbuf();
 }

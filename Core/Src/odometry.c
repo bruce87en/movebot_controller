@@ -13,8 +13,8 @@
 
 
 // correct these value later
-const float ticks_meter = 5000;
-const float base_width = 0.2;
+const float ticks_meter = 500000;
+const float base_width = 0.1;
 
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
@@ -44,20 +44,29 @@ void OdometryReset()
 
 void OdometryGetData(struct OdometryData *data)
 {
+	float temp_x, temp_y, temp_theta;
+
 	if (!data)
 		return;
 
-	data->x = odometry_x;
-	data->y = odometry_y;
-	data->theta = odometry_theta;
-
-	data->dx = odometry_x - last_odometry_x;
-	data->dy = odometry_y - last_odometry_y;
-	data->dtheta = odometry_theta - last_odometry_theta;
+	temp_x = odometry_x;
+	temp_y = odometry_y;
 
 	osKernelLock();
+	data->dtheta = odometry_theta - last_odometry_theta;
 	odometry_theta = fmod(odometry_theta, 2*M_PI);
+	temp_theta = odometry_theta;
 	osKernelUnlock();
+	data->dx = temp_x - last_odometry_x;
+	data->dy = temp_y - last_odometry_y;
+
+	data->x = temp_x;
+	data->y = temp_y;
+	data->theta = temp_theta;
+
+	last_odometry_x = temp_x;
+	last_odometry_y = temp_y;
+	last_odometry_theta = temp_theta;
 }
 
 static void CalcOdometry(int16_t left_signed, int16_t right_signed)
@@ -103,6 +112,14 @@ void OdometryTask(void *argument)
 		// AAR must be set to 0xFFFF
 		left_signed = (int)left;
 		right_signed =  (int)right;
+
+		// reverse start from 0xFFFF = -1
+		if (left_signed < 0) {
+			left_signed += 1;
+		}
+		if (right_signed < 0) {
+			right_signed += 1;
+		}
 
 		if (left_signed == 0 && right_signed == 0) {
 			continue;
