@@ -12,6 +12,7 @@
 #include <std_msgs/Float32MultiArray.h>
 #include <geometry_msgs/Twist.h>
 
+#include "pid_task.h"
 #include "odometry.h"
 #include "movebot_controller_node.h"
 
@@ -25,12 +26,19 @@ ros::Time now;
 
 std_msgs::Float32MultiArray odometry;
 ros::Publisher odometry_pub("odometry_data", &odometry);
-float odometry_data[7];
+float odometry_data[9];
 
 void cmdMessageCb(const geometry_msgs::Twist& cmd_msg){
+	float vl, vr;
 	float vx = cmd_msg.linear.x;
-	float vy = cmd_msg.linear.y;
+//	float vy = cmd_msg.linear.y;
 	float rotate = cmd_msg.angular.z;
+
+	vl = vx - base_width*rotate/2;
+	vr = vx + base_width*rotate/2;
+
+	PidSetLeftTarget(vl);
+	PidSetRightTarget(vr);
 }
 
 ros::Subscriber<geometry_msgs::Twist> cmd_sub("cmd_vel", &cmdMessageCb);
@@ -44,7 +52,7 @@ void MoveBotControllerNodeTask(void *argument)
 	nh.subscribe(cmd_sub);
 
 	odometry.data = odometry_data;
-	odometry.data_length = 7;
+	odometry.data_length = 9;
 
 	OdometryReset();
 	last_time = nh.now();
@@ -63,9 +71,14 @@ void MoveBotControllerNodeTask(void *argument)
 		odometry_data[3] = data.dx;
 		odometry_data[4] = data.dy;
 		odometry_data[5] = data.dtheta;
-		odometry_data[6] = dt;
+		odometry_data[6] = data.dl;
+		odometry_data[7] = data.dr;
+		odometry_data[8] = dt;
 
 		odometry_pub.publish(&odometry);
+
+		PidSetLeftMeasure(data.dl/dt);
+		PidSetRightMeasure(data.dr/dt);
 
 		nh.spinOnce();
 	}

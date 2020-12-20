@@ -26,6 +26,7 @@
 #include "key.h"
 #include "movebot_controller_node.h"
 #include "odometry.h"
+#include "pid_task.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -70,6 +71,13 @@ const osThreadAttr_t keyTask_attributes = {
 osThreadId_t odometryTaskHandle;
 const osThreadAttr_t odometryTask_attributes = {
   .name = "odometryTask",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 8
+};
+
+osThreadId_t pidTaskHandle;
+const osThreadAttr_t pidTask_attributes = {
+  .name = "pidTask",
   .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 128 * 8
 };
@@ -138,6 +146,7 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 //  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+  PidInit();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -167,6 +176,7 @@ int main(void)
   /* add threads, ... */
   keyTaskHandle = osThreadNew(KeyTask, NULL, &keyTask_attributes);
   odometryTaskHandle = osThreadNew(OdometryTask, NULL, &odometryTask_attributes);
+  pidTaskHandle = osThreadNew(PidTask, NULL, &pidTask_attributes);
   controllerNodeTaskHandle = osThreadNew(MoveBotControllerNodeTask, NULL, &controllerNodeTask_attributes);
   /* USER CODE END RTOS_THREADS */
 
@@ -300,7 +310,7 @@ static void MX_TIM3_Init(void)
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   sConfig.EncoderMode = TIM_ENCODERMODE_TI1;
-  sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
+  sConfig.IC1Polarity = TIM_ICPOLARITY_FALLING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
   sConfig.IC1Filter = 0;

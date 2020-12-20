@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+extern const float base_width;
+
 struct OdometryData {
 	float x;
 	float y;
@@ -19,6 +21,8 @@ struct OdometryData {
 	float dx;
 	float dy;
 	float dtheta;
+	float dl; // wheel left
+	float dr; // wheel right
 };
 
 void OdometryReset();
